@@ -24,7 +24,7 @@ jobs:
         image: postgres:18
         env:
           POSTGRES_USER: taskboard
-          POSTGRES_PASSWORD: taskboard
+          POSTGRES_PASSWORD: ci-${{ github.run_id }}
           POSTGRES_DB: taskboard
         ports:
           - 5432:5432
@@ -34,7 +34,7 @@ jobs:
           --health-timeout 3s
           --health-retries 10
     env:
-      DATABASE_URL: postgres://taskboard:taskboard@localhost:5432/taskboard
+      DATABASE_URL: postgres://taskboard:ci-${{ github.run_id }}@localhost:5432/taskboard
     steps:
       - uses: actions/checkout@v7
         with:
