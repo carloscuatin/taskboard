@@ -19,6 +19,7 @@ Everything runs in Docker. The host needs only Docker, `make` and `openssl`.
     make env        # generate .env with a random Postgres password (other targets do it for you)
     make build      # build the dev images
     make up         # start Postgres
+    make api-dev    # run the API on http://localhost:8080, rebuilt and restarted on every save
     make web-dev    # Vite dev server on http://localhost:5173
     make check      # every gate CI runs, in the same order
     make hooks      # enable the pre-commit hook (formatting)
