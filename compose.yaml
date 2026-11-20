@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: taskboard
+      POSTGRES_PASSWORD: taskboard
+      POSTGRES_DB: taskboard
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskboard"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: api
+      dockerfile: Dockerfile.dev
+    working_dir: /work
+    environment:
+      DATABASE_URL: postgres://taskboard:taskboard@db:5432/taskboard
+    volumes:
+      - ./api:/work
+      # build artifacts and crate cache live in volumes: faster than bind mounts on macOS
+      - api-target:/work/target
+      - cargo-registry:/usr/local/cargo/registry
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: web
+      dockerfile: Dockerfile.dev
+    working_dir: /work
+    volumes:
+      - ./web:/work
+      - web-node-modules:/work/node_modules
+      - pnpm-store:/home/node/.local/share/pnpm/store
+    ports:
+      - "127.0.0.1:5173:5173"
+
+volumes:
+  pgdata:
+  api-target:
+  cargo-registry:
+  web-node-modules:
+  pnpm-store:

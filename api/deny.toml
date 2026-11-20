@@ -1,0 +1,29 @@
+# Third-party crates that only the outer layers may use. `wrappers` lists the only workspace
+# crates allowed to depend on each one directly, so `domain` and `application` stay free of them.
+[graph]
+all-features = true
+
+[advisories]
+version = 2
+
+[licenses]
+version = 2
+private = { ignore = true }
+allow = ["MIT", "Apache-2.0", "Unicode-3.0", "BSD-3-Clause", "ISC", "Zlib", "CC0-1.0"]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+deny = [
+  { name = "sqlx", wrappers = ["taskboard-adapters"] },
+  { name = "argon2", wrappers = ["taskboard-adapters"] },
+  { name = "jsonwebtoken", wrappers = ["taskboard-adapters"] },
+  { name = "axum", wrappers = ["taskboard-api"] },
+  { name = "utoipa", wrappers = ["taskboard-api"] },
+  { name = "tokio", wrappers = ["taskboard-adapters", "taskboard-api"] },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

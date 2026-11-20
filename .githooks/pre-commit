@@ -1,0 +1,4 @@
+#!/bin/sh
+# Fast formatting gates, run in Docker like everything else. Enable with `make hooks`.
+set -e
+make api-fmt-check web-format-check

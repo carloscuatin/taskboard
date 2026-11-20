@@ -1,0 +1,9 @@
+FROM node:26-slim
+
+ARG PNPM_VERSION=12.21.0
+RUN npm install -g pnpm@${PNPM_VERSION} \
+    && mkdir -p /work/node_modules /home/node/.local/share/pnpm/store \
+    && chown -R node:node /work /home/node
+
+USER node
+WORKDIR /work
