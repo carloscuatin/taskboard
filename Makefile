@@ -3,7 +3,7 @@ WEB = docker compose run --rm --no-deps web sh -c
 
 .DEFAULT_GOAL := build
 
-.PHONY: env build up down api-fmt api-fmt-check api-lint api-test api-build api-deny api-shell \
+.PHONY: env build up down api-fmt api-fmt-check api-lint api-test api-build api-deny api-dev api-shell \
         web-install web-dev web-format-check web-lint web-typecheck web-test web-build web-shell \
         check hooks clean
 
@@ -36,6 +36,9 @@ api-lint:       env ; $(API) cargo clippy --workspace --all-targets -- -D warnin
 api-test:       env ; docker compose run --rm api cargo test --workspace
 api-build:      env ; $(API) cargo build --workspace
 api-deny:       env ; $(API) cargo deny check
+# Rebuilds and restarts the API on every save under crates/ or in a Cargo.toml.
+api-dev:        env ; docker compose run --rm --service-ports api \
+                      watchexec --restart --watch crates --watch Cargo.toml --exts rs,toml -- cargo run -p taskboard-api
 api-shell:      env ; docker compose run --rm api bash
 
 web-install:       env ; $(WEB) 'pnpm install --frozen-lockfile'
