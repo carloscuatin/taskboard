@@ -4,7 +4,8 @@ RUN apt-get update && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends git pkg-config libssl-dev \
     && rm -rf /var/lib/apt/lists/* \
     && rustup component add rustfmt clippy \
-    && cargo install cargo-deny --locked
+    && cargo install cargo-deny --locked \
+    && cargo install watchexec-cli --locked --version 2.8.0
 
 ARG UID=1000
 ARG GID=1000
