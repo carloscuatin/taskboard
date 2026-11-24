@@ -55,3 +55,28 @@ fn lowercases_both_parts() {
     let email = Email::parse("First.Last@Example.COM").expect("lowercases both parts");
     assert_eq!(email.as_str(), "first.last@example.com");
 }
+
+#[test]
+fn rejects_non_ascii_local_part() {
+    let err = Email::parse("josé@example.com").expect_err("rejects non-ASCII local part");
+    assert!(matches!(err, EmailError::NonAscii));
+}
+
+#[test]
+fn rejects_non_ascii_domain() {
+    let err = Email::parse("user@bücher.example").expect_err("rejects non-ASCII domain");
+    assert!(matches!(err, EmailError::NonAscii));
+}
+
+#[test]
+fn rejects_fullwidth_at_sign() {
+    let err = Email::parse("user\u{FF20}example.com").expect_err("rejects fullwidth at sign");
+    assert!(matches!(err, EmailError::NonAscii));
+}
+
+#[test]
+fn accepts_ascii_internationalized_domain() {
+    let email =
+        Email::parse("user@xn--bcher-kva.example").expect("accepts ASCII internationalized domain");
+    assert_eq!(email.as_str(), "user@xn--bcher-kva.example");
+}

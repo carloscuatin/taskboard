@@ -1,6 +1,7 @@
 #[derive(Debug)]
 pub enum EmailError {
     Empty,
+    NonAscii,
 }
 
 /// A parsed and normalized email address.
@@ -22,6 +23,10 @@ impl Email {
 
         if normalized.is_empty() {
             return Err(EmailError::Empty);
+        }
+
+        if !normalized.is_ascii() {
+            return Err(EmailError::NonAscii);
         }
 
         Ok(Self(normalized))
