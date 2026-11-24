@@ -13,10 +13,15 @@ pub enum EmailError {
 ///
 /// let email = Email("user@example.com".to_string());
 /// ```
+#[derive(Debug)]
 pub struct Email(String);
 
 impl Email {
     pub fn parse(s: &str) -> Result<Self, EmailError> {
+        if s.trim().is_empty() {
+            return Err(EmailError::Empty);
+        }
+
         Ok(Self(s.to_string()))
     }
 
@@ -41,5 +46,21 @@ mod tests {
             .expect("keeps common local part characters");
 
         assert_eq!(email.as_str(), "first.last+tag@sub.example.org");
+    }
+
+    #[test]
+    fn rejects_empty_text() {
+        let err = Email::parse("").expect_err("rejects empty text");
+        assert!(matches!(err, EmailError::Empty));
+    }
+
+    #[test]
+    fn rejects_only_whitespace() {
+        let inputs = ["   ", "\n", "\t", " \n\t "];
+
+        for text in inputs {
+            let err = Email::parse(text).expect_err("rejects only whitespace");
+            assert!(matches!(err, EmailError::Empty));
+        }
     }
 }
