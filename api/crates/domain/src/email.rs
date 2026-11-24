@@ -4,6 +4,8 @@ pub enum EmailError {
     NonAscii,
     InvalidCharacter,
     TooLong,
+    MissingAt,
+    MultipleAt,
     LocalPartTooLong,
 }
 
@@ -43,10 +45,15 @@ impl Email {
             return Err(EmailError::TooLong);
         }
 
-        if normalized
-            .split_once('@')
-            .is_some_and(|(local, _)| local.len() > 64)
-        {
+        let Some((local, domain)) = normalized.split_once('@') else {
+            return Err(EmailError::MissingAt);
+        };
+
+        if domain.contains('@') {
+            return Err(EmailError::MultipleAt);
+        }
+
+        if local.len() > 64 {
             return Err(EmailError::LocalPartTooLong);
         }
 

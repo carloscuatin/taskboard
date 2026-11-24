@@ -164,3 +164,27 @@ fn rejects_65_character_local_part() {
     let err = Email::parse(&text).expect_err("rejects a 65 character local part");
     assert!(matches!(err, EmailError::LocalPartTooLong));
 }
+
+#[test]
+fn rejects_missing_at() {
+    let err = Email::parse("user.example.com").expect_err("rejects a missing at sign");
+    assert!(matches!(err, EmailError::MissingAt));
+}
+
+#[test]
+fn rejects_consecutive_at_signs() {
+    let err = Email::parse("user@@example.com").expect_err("rejects consecutive at signs");
+    assert!(matches!(err, EmailError::MultipleAt));
+}
+
+#[test]
+fn rejects_separate_at_signs() {
+    let err = Email::parse("user@host@example.com").expect_err("rejects separate at signs");
+    assert!(matches!(err, EmailError::MultipleAt));
+}
+
+#[test]
+fn rejects_quoted_local_part() {
+    let err = Email::parse("\"a@b\"@example.com").expect_err("rejects a quoted local part");
+    assert!(matches!(err, EmailError::MultipleAt));
+}
