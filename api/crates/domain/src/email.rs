@@ -29,6 +29,8 @@ impl Email {
     pub const MAX_LEN: usize = 254;
     pub const MAX_LOCAL_LEN: usize = 64;
 
+    /// Rules run from the cheap and global to the structural, so a bad character is never
+    /// reported as a problem with the at sign, and only the first failure is returned.
     pub fn parse(s: &str) -> Result<Self, EmailError> {
         let normalized = s.trim().to_ascii_lowercase();
 
