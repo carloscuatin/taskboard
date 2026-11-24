@@ -273,3 +273,48 @@ fn checks_local_part_before_domain() {
     let err = Email::parse(&long_local).expect_err("reports a long local part first");
     assert!(matches!(err, EmailError::LocalPartTooLong));
 }
+
+#[test]
+fn every_error_has_its_own_description() {
+    let errors = [
+        EmailError::Empty,
+        EmailError::NonAscii,
+        EmailError::InvalidCharacter,
+        EmailError::TooLong,
+        EmailError::MissingAt,
+        EmailError::MultipleAt,
+        EmailError::EmptyLocalPart,
+        EmailError::LocalPartTooLong,
+        EmailError::EmptyDomain,
+        EmailError::DomainWithoutDot,
+        EmailError::DomainDotAtEdge,
+        EmailError::DomainConsecutiveDots,
+    ];
+
+    let descriptions: Vec<String> = errors.iter().map(|e| e.to_string()).collect();
+    assert!(descriptions.iter().all(|d| !d.is_empty()));
+
+    let unique: std::collections::HashSet<&String> = descriptions.iter().collect();
+    assert_eq!(unique.len(), descriptions.len());
+}
+
+#[test]
+fn errors_are_comparable() {
+    let first = Email::parse("").expect_err("rejects empty text");
+    let second = Email::parse("").expect_err("rejects empty text");
+    let other = Email::parse("user.example.com").expect_err("rejects a missing at sign");
+
+    assert_eq!(first, second);
+    assert_ne!(first, other);
+}
+
+#[test]
+fn error_propagates_as_std_error() {
+    fn parse_with_question_mark() -> Result<(), Box<dyn std::error::Error>> {
+        Email::parse("user@")?;
+        Ok(())
+    }
+
+    let err = parse_with_question_mark().expect_err("propagates the rejection");
+    assert_eq!(err.to_string(), EmailError::EmptyDomain.to_string());
+}
