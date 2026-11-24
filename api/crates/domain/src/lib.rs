@@ -1,3 +1,8 @@
+mod email;
+
+pub use email::Email;
+pub use email::EmailError;
+
 #[cfg(test)]
 mod tests {
     #[test]
