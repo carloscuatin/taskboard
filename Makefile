@@ -4,7 +4,7 @@ WEB = docker compose run --rm --no-deps web sh -c
 .DEFAULT_GOAL := build
 
 .PHONY: env build up down api-fmt api-fmt-check api-lint api-test api-build api-deny api-dev api-shell \
-        web-install web-dev web-format-check web-lint web-typecheck web-test web-build web-shell \
+        web-install web-dev web-format web-format-check web-lint web-typecheck web-test web-build web-shell \
         check hooks clean
 
 # Docker Compose refuses to read compose.yaml without POSTGRES_PASSWORD, so every target that
@@ -44,6 +44,7 @@ api-shell:      env ; docker compose run --rm api bash
 
 web-install:       env ; $(WEB) 'pnpm install --frozen-lockfile'
 web-dev:           env ; docker compose run --rm --service-ports web sh -c 'pnpm install && pnpm dev --host'
+web-format:        env ; $(WEB) 'pnpm format'
 web-format-check:  env ; $(WEB) 'pnpm format:check'
 web-lint:          env ; $(WEB) 'pnpm lint'
 web-typecheck:     env ; $(WEB) 'pnpm typecheck'

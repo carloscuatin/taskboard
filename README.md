@@ -26,8 +26,8 @@ Everything runs in Docker. The host needs only Docker, `make` and `openssl`.
     make clean      # remove containers and volumes
 
 Single gates: `api-fmt-check`, `api-lint`, `api-test`, `api-build`, `api-deny`, and
-`web-format-check`, `web-lint`, `web-typecheck`, `web-test`, `web-build`. `make api-shell` and
-`make web-shell` open a shell in each container.
+`web-format`, `web-format-check`, `web-lint`, `web-typecheck`, `web-test`, `web-build`.
+`make api-shell` and `make web-shell` open a shell in each container.
 
 ## Postgres password
 
