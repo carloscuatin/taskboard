@@ -80,3 +80,35 @@ fn accepts_ascii_internationalized_domain() {
         Email::parse("user@xn--bcher-kva.example").expect("accepts ASCII internationalized domain");
     assert_eq!(email.as_str(), "user@xn--bcher-kva.example");
 }
+
+#[test]
+fn rejects_space_in_local_part() {
+    let err = Email::parse("first last@example.com").expect_err("rejects space in local part");
+    assert!(matches!(err, EmailError::InvalidCharacter));
+}
+
+#[test]
+fn rejects_space_in_domain() {
+    let err = Email::parse("user@exam ple.com").expect_err("rejects space in domain");
+    assert!(matches!(err, EmailError::InvalidCharacter));
+}
+
+#[test]
+fn rejects_tab_inside() {
+    let err = Email::parse("user\t@example.com").expect_err("rejects tab inside");
+    assert!(matches!(err, EmailError::InvalidCharacter));
+}
+
+#[test]
+fn rejects_control_characters() {
+    let inputs = [
+        "user\u{0}@example.com",
+        "user@example.com\u{0}",
+        "user\u{7F}@example.com",
+    ];
+
+    for text in inputs {
+        let err = Email::parse(text).expect_err("rejects control characters");
+        assert!(matches!(err, EmailError::InvalidCharacter));
+    }
+}

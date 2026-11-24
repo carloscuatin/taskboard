@@ -2,6 +2,7 @@
 pub enum EmailError {
     Empty,
     NonAscii,
+    InvalidCharacter,
 }
 
 /// A parsed and normalized email address.
@@ -27,6 +28,13 @@ impl Email {
 
         if !normalized.is_ascii() {
             return Err(EmailError::NonAscii);
+        }
+
+        if normalized
+            .chars()
+            .any(|c| c.is_whitespace() || c.is_ascii_control())
+        {
+            return Err(EmailError::InvalidCharacter);
         }
 
         Ok(Self(normalized))
