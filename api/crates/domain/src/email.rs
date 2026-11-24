@@ -9,6 +9,9 @@ pub enum EmailError {
     EmptyLocalPart,
     LocalPartTooLong,
     EmptyDomain,
+    DomainWithoutDot,
+    DomainDotAtEdge,
+    DomainConsecutiveDots,
 }
 
 /// A parsed and normalized email address.
@@ -65,6 +68,18 @@ impl Email {
 
         if domain.is_empty() {
             return Err(EmailError::EmptyDomain);
+        }
+
+        if !domain.contains('.') {
+            return Err(EmailError::DomainWithoutDot);
+        }
+
+        if domain.starts_with('.') || domain.ends_with('.') {
+            return Err(EmailError::DomainDotAtEdge);
+        }
+
+        if domain.contains("..") {
+            return Err(EmailError::DomainConsecutiveDots);
         }
 
         Ok(Self(normalized))

@@ -206,3 +206,37 @@ fn rejects_lone_at_sign() {
     let err = Email::parse("@").expect_err("rejects a lone at sign");
     assert!(matches!(err, EmailError::EmptyLocalPart));
 }
+
+#[test]
+fn rejects_domain_without_dot() {
+    let err = Email::parse("user@localhost").expect_err("rejects a domain without a dot");
+    assert!(matches!(err, EmailError::DomainWithoutDot));
+}
+
+#[test]
+fn rejects_domain_starting_with_dot() {
+    let inputs = ["user@.example.com", "user@."];
+
+    for text in inputs {
+        let err = Email::parse(text).expect_err("rejects a domain starting with a dot");
+        assert!(matches!(err, EmailError::DomainDotAtEdge));
+    }
+}
+
+#[test]
+fn rejects_domain_ending_with_dot() {
+    let err = Email::parse("user@example.com.").expect_err("rejects a domain ending with a dot");
+    assert!(matches!(err, EmailError::DomainDotAtEdge));
+}
+
+#[test]
+fn rejects_consecutive_dots_in_domain() {
+    let err = Email::parse("user@example..com").expect_err("rejects consecutive dots in domain");
+    assert!(matches!(err, EmailError::DomainConsecutiveDots));
+}
+
+#[test]
+fn does_not_check_local_part_dots() {
+    let email = Email::parse("first..last.@example.com").expect("does not check local part dots");
+    assert_eq!(email.as_str(), "first..last.@example.com");
+}
