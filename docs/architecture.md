@@ -6,8 +6,8 @@ A multi-user API for projects and tasks. Users register, log in and belong to pr
 
 ## Current status
 
-Scaffold only: the four API crates and the Vue app build, and every gate passes. There is no domain
-code yet.
+The four API crates and the Vue app build, and every gate passes. The domain has its first value
+object, `Email`, which can only be obtained by parsing text.
 
 ## Decisions
 
@@ -45,3 +45,5 @@ validated in CI and the local hook only checks formatting).
   `viewer`); the global `admin` role only manages users.
 - Input is validated at the edge, and domain errors are translated to HTTP without leaking
   internals.
+- The identity of a user is their email address in its normalized form: trimmed and lowercased as
+  ASCII. Internationalized domains are accepted in their `xn--` form only.
