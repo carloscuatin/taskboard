@@ -1,54 +1,10 @@
-use std::error::Error;
 use std::fmt;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EmailError {
-    Empty,
-    NonAscii,
-    InvalidCharacter,
-    TooLong,
-    MissingAt,
-    MultipleAt,
-    EmptyLocalPart,
-    LocalPartTooLong,
-    EmptyDomain,
-    DomainWithoutDot,
-    DomainDotAtEdge,
-    DomainConsecutiveDots,
-}
+mod error;
+mod rules;
 
-impl fmt::Display for EmailError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            EmailError::Empty => write!(f, "the email is empty"),
-            EmailError::NonAscii => write!(f, "the email contains non-ASCII characters"),
-            EmailError::InvalidCharacter => {
-                write!(f, "the email contains a space or a control character")
-            }
-            EmailError::TooLong => {
-                write!(f, "the email is longer than {} characters", Email::MAX_LEN)
-            }
-            EmailError::MissingAt => write!(f, "the email has no at sign"),
-            EmailError::MultipleAt => write!(f, "the email has more than one at sign"),
-            EmailError::EmptyLocalPart => write!(f, "the part before the at sign is empty"),
-            EmailError::LocalPartTooLong => {
-                write!(
-                    f,
-                    "the part before the at sign is longer than {} characters",
-                    Email::MAX_LOCAL_LEN
-                )
-            }
-            EmailError::EmptyDomain => write!(f, "the part after the at sign is empty"),
-            EmailError::DomainWithoutDot => write!(f, "the domain has no dot"),
-            EmailError::DomainDotAtEdge => write!(f, "the domain starts or ends with a dot"),
-            EmailError::DomainConsecutiveDots => {
-                write!(f, "the domain has two dots in a row")
-            }
-        }
-    }
-}
-
-impl Error for EmailError {}
+pub use error::EmailError;
+use rules::{check_characters, check_domain, check_length, check_local_part, split_at_sign};
 
 /// A parsed and normalized email address.
 ///
@@ -62,77 +18,6 @@ impl Error for EmailError {}
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Email(String);
-
-fn check_characters(text: &str) -> Result<(), EmailError> {
-    if text.is_empty() {
-        return Err(EmailError::Empty);
-    }
-
-    if !text.is_ascii() {
-        return Err(EmailError::NonAscii);
-    }
-
-    if text
-        .chars()
-        .any(|c| c.is_whitespace() || c.is_ascii_control())
-    {
-        return Err(EmailError::InvalidCharacter);
-    }
-
-    Ok(())
-}
-
-fn check_length(text: &str) -> Result<(), EmailError> {
-    if text.len() > Email::MAX_LEN {
-        return Err(EmailError::TooLong);
-    }
-
-    Ok(())
-}
-
-fn split_at_sign(text: &str) -> Result<(&str, &str), EmailError> {
-    let Some((local, domain)) = text.split_once('@') else {
-        return Err(EmailError::MissingAt);
-    };
-
-    if domain.contains('@') {
-        return Err(EmailError::MultipleAt);
-    }
-
-    Ok((local, domain))
-}
-
-fn check_local_part(local: &str) -> Result<(), EmailError> {
-    if local.len() > Email::MAX_LOCAL_LEN {
-        return Err(EmailError::LocalPartTooLong);
-    }
-
-    if local.is_empty() {
-        return Err(EmailError::EmptyLocalPart);
-    }
-
-    Ok(())
-}
-
-fn check_domain(domain: &str) -> Result<(), EmailError> {
-    if domain.is_empty() {
-        return Err(EmailError::EmptyDomain);
-    }
-
-    if !domain.contains('.') {
-        return Err(EmailError::DomainWithoutDot);
-    }
-
-    if domain.starts_with('.') || domain.ends_with('.') {
-        return Err(EmailError::DomainDotAtEdge);
-    }
-
-    if domain.contains("..") {
-        return Err(EmailError::DomainConsecutiveDots);
-    }
-
-    Ok(())
-}
 
 impl fmt::Display for Email {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
