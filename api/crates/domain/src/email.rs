@@ -6,7 +6,9 @@ pub enum EmailError {
     TooLong,
     MissingAt,
     MultipleAt,
+    EmptyLocalPart,
     LocalPartTooLong,
+    EmptyDomain,
 }
 
 /// A parsed and normalized email address.
@@ -55,6 +57,14 @@ impl Email {
 
         if local.len() > 64 {
             return Err(EmailError::LocalPartTooLong);
+        }
+
+        if local.is_empty() {
+            return Err(EmailError::EmptyLocalPart);
+        }
+
+        if domain.is_empty() {
+            return Err(EmailError::EmptyDomain);
         }
 
         Ok(Self(normalized))

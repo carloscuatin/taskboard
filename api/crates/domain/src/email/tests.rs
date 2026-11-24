@@ -188,3 +188,21 @@ fn rejects_quoted_local_part() {
     let err = Email::parse("\"a@b\"@example.com").expect_err("rejects a quoted local part");
     assert!(matches!(err, EmailError::MultipleAt));
 }
+
+#[test]
+fn rejects_empty_local_part() {
+    let err = Email::parse("@example.com").expect_err("rejects an empty local part");
+    assert!(matches!(err, EmailError::EmptyLocalPart));
+}
+
+#[test]
+fn rejects_empty_domain() {
+    let err = Email::parse("user@").expect_err("rejects an empty domain");
+    assert!(matches!(err, EmailError::EmptyDomain));
+}
+
+#[test]
+fn rejects_lone_at_sign() {
+    let err = Email::parse("@").expect_err("rejects a lone at sign");
+    assert!(matches!(err, EmailError::EmptyLocalPart));
+}
