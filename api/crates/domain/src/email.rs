@@ -18,11 +18,13 @@ pub struct Email(String);
 
 impl Email {
     pub fn parse(s: &str) -> Result<Self, EmailError> {
-        if s.trim().is_empty() {
+        let normalized = s.trim().to_ascii_lowercase();
+
+        if normalized.is_empty() {
             return Err(EmailError::Empty);
         }
 
-        Ok(Self(s.to_string()))
+        Ok(Self(normalized))
     }
 
     pub fn as_str(&self) -> &str {
@@ -62,5 +64,31 @@ mod tests {
             let err = Email::parse(text).expect_err("rejects only whitespace");
             assert!(matches!(err, EmailError::Empty));
         }
+    }
+
+    #[test]
+    fn trims_surrounding_spaces() {
+        let email = Email::parse("  user@example.com  ").expect("trims surrounding spaces");
+        assert_eq!(email.as_str(), "user@example.com");
+    }
+
+    #[test]
+    fn trims_surrounding_tabs_and_line_breaks() {
+        let email =
+            Email::parse("\tuser@example.com\n").expect("trims surrounding tabs and line breaks");
+        assert_eq!(email.as_str(), "user@example.com");
+    }
+
+    #[test]
+    fn trims_surrounding_non_breaking_spaces() {
+        let email = Email::parse("\u{00A0}user@example.com\u{00A0}")
+            .expect("trims surrounding non-breaking spaces");
+        assert_eq!(email.as_str(), "user@example.com");
+    }
+
+    #[test]
+    fn lowercases_both_parts() {
+        let email = Email::parse("First.Last@Example.COM").expect("lowercases both parts");
+        assert_eq!(email.as_str(), "first.last@example.com");
     }
 }
