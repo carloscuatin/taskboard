@@ -1,5 +1,15 @@
 use super::*;
 
+/// Builds a well-formed address with the given local part and total length.
+fn address_with(local_len: usize, total_len: usize) -> String {
+    let domain_len = total_len - local_len - 1;
+    format!(
+        "{}@{}.com",
+        "a".repeat(local_len),
+        "d".repeat(domain_len - ".com".len())
+    )
+}
+
 #[test]
 fn accepts_well_formed_address() {
     let email = Email::parse("user@example.com").expect("a well-formed address is accepted");
@@ -111,4 +121,46 @@ fn rejects_control_characters() {
         let err = Email::parse(text).expect_err("rejects control characters");
         assert!(matches!(err, EmailError::InvalidCharacter));
     }
+}
+
+#[test]
+fn accepts_254_characters() {
+    let text = address_with(64, 254);
+    assert_eq!(text.len(), 254);
+
+    let email = Email::parse(&text).expect("accepts 254 characters");
+    assert_eq!(email.as_str(), text);
+}
+
+#[test]
+fn rejects_255_characters() {
+    let text = address_with(64, 255);
+    assert_eq!(text.len(), 255);
+
+    let err = Email::parse(&text).expect_err("rejects 255 characters");
+    assert!(matches!(err, EmailError::TooLong));
+}
+
+#[test]
+fn measures_length_after_trimming() {
+    let text = address_with(64, 254);
+
+    let email = Email::parse(&format!("  {text}  ")).expect("measures length after trimming");
+    assert_eq!(email.as_str().len(), 254);
+}
+
+#[test]
+fn accepts_64_character_local_part() {
+    let text = address_with(64, 100);
+
+    let email = Email::parse(&text).expect("accepts a 64 character local part");
+    assert_eq!(email.as_str(), text);
+}
+
+#[test]
+fn rejects_65_character_local_part() {
+    let text = address_with(65, 100);
+
+    let err = Email::parse(&text).expect_err("rejects a 65 character local part");
+    assert!(matches!(err, EmailError::LocalPartTooLong));
 }

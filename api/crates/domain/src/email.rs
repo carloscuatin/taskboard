@@ -3,6 +3,8 @@ pub enum EmailError {
     Empty,
     NonAscii,
     InvalidCharacter,
+    TooLong,
+    LocalPartTooLong,
 }
 
 /// A parsed and normalized email address.
@@ -35,6 +37,17 @@ impl Email {
             .any(|c| c.is_whitespace() || c.is_ascii_control())
         {
             return Err(EmailError::InvalidCharacter);
+        }
+
+        if normalized.len() > 254 {
+            return Err(EmailError::TooLong);
+        }
+
+        if normalized
+            .split_once('@')
+            .is_some_and(|(local, _)| local.len() > 64)
+        {
+            return Err(EmailError::LocalPartTooLong);
         }
 
         Ok(Self(normalized))
