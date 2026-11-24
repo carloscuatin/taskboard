@@ -60,8 +60,14 @@ impl Error for EmailError {}
 ///
 /// let email = Email("user@example.com".to_string());
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Email(String);
+
+impl fmt::Display for Email {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
 
 impl Email {
     pub const MAX_LEN: usize = 254;

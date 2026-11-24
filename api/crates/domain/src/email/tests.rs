@@ -318,3 +318,43 @@ fn error_propagates_as_std_error() {
     let err = parse_with_question_mark().expect_err("propagates the rejection");
     assert_eq!(err.to_string(), EmailError::EmptyDomain.to_string());
 }
+
+#[test]
+fn equal_after_normalization() {
+    let padded = Email::parse(" User@Example.com ").expect("accepts a padded address");
+    let plain = Email::parse("user@example.com").expect("accepts a plain address");
+
+    assert_eq!(padded, plain);
+}
+
+#[test]
+fn different_addresses_are_not_equal() {
+    let com = Email::parse("user@example.com").expect("accepts a .com address");
+    let org = Email::parse("user@example.org").expect("accepts a .org address");
+
+    assert_ne!(com, org);
+}
+
+#[test]
+fn equal_addresses_hash_the_same() {
+    let mut emails = std::collections::HashSet::new();
+
+    emails.insert(Email::parse("USER@example.com").expect("accepts an uppercase local part"));
+    emails.insert(Email::parse("user@EXAMPLE.com").expect("accepts an uppercase domain"));
+
+    assert_eq!(emails.len(), 1);
+}
+
+#[test]
+fn exposes_normalized_form() {
+    let email = Email::parse(" User@Example.com ").expect("accepts a padded address");
+
+    assert_eq!(email.as_str(), "user@example.com");
+}
+
+#[test]
+fn displays_normalized_form() {
+    let email = Email::parse(" User@Example.com ").expect("accepts a padded address");
+
+    assert_eq!(email.to_string(), "user@example.com");
+}
