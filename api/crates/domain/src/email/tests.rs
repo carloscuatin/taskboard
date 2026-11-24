@@ -275,6 +275,12 @@ fn checks_local_part_before_domain() {
 }
 
 #[test]
+fn reports_dot_at_edge_before_consecutive_dots() {
+    let err = Email::parse("user@..com").expect_err("reports the dot at the edge first");
+    assert!(matches!(err, EmailError::DomainDotAtEdge));
+}
+
+#[test]
 fn every_error_has_its_own_description() {
     let errors = [
         EmailError::Empty,
