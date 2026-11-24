@@ -240,3 +240,36 @@ fn does_not_check_local_part_dots() {
     let email = Email::parse("first..last.@example.com").expect("does not check local part dots");
     assert_eq!(email.as_str(), "first..last.@example.com");
 }
+
+#[test]
+fn reports_non_ascii_before_space() {
+    let err = Email::parse("jo sé@example.com").expect_err("reports non-ASCII first");
+    assert!(matches!(err, EmailError::NonAscii));
+}
+
+#[test]
+fn reports_invalid_character_before_length() {
+    let text = format!("{} {}", "a".repeat(150), "a".repeat(149));
+    assert_eq!(text.len(), 300);
+
+    let err = Email::parse(&text).expect_err("reports an internal space before the length");
+    assert!(matches!(err, EmailError::InvalidCharacter));
+}
+
+#[test]
+fn reports_length_before_at_signs() {
+    let text = "a".repeat(255);
+
+    let err = Email::parse(&text).expect_err("reports the length before the at signs");
+    assert!(matches!(err, EmailError::TooLong));
+}
+
+#[test]
+fn checks_local_part_before_domain() {
+    let err = Email::parse("@localhost").expect_err("reports an empty local part first");
+    assert!(matches!(err, EmailError::EmptyLocalPart));
+
+    let long_local = format!("{}@localhost", "a".repeat(65));
+    let err = Email::parse(&long_local).expect_err("reports a long local part first");
+    assert!(matches!(err, EmailError::LocalPartTooLong));
+}
