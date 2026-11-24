@@ -1,0 +1,18 @@
+# Aligns the editor only: rustfmt does not read this file, `make api-fmt-check` is the authority.
+# `root` keeps it from merging with web/.editorconfig or any parent one.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.rs]
+indent_style = space
+indent_size = 4
+max_line_length = 100
+
+[*.{toml,yaml,yml}]
+indent_style = space
+indent_size = 2
