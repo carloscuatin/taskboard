@@ -95,4 +95,37 @@ fn rejection_does_not_carry_password() {
     let error = Password::parse("tiny-secret".to_string()).expect_err("too short");
 
     assert!(!format!("{error:?}").contains("tiny-secret"));
+    assert!(!format!("{error}").contains("tiny-secret"));
+}
+
+#[test]
+fn every_error_has_its_own_description() {
+    let errors = [PasswordError::TooShort, PasswordError::TooLong];
+
+    let descriptions: Vec<String> = errors.iter().map(|e| e.to_string()).collect();
+    assert!(descriptions.iter().all(|d| !d.is_empty()));
+
+    let unique: std::collections::HashSet<&String> = descriptions.iter().collect();
+    assert_eq!(unique.len(), descriptions.len());
+}
+
+#[test]
+fn errors_are_comparable() {
+    let first = Password::parse(String::new()).expect_err("rejects empty text");
+    let second = Password::parse("a".repeat(14)).expect_err("rejects a short text");
+    let other = Password::parse("a".repeat(129)).expect_err("rejects a long text");
+
+    assert_eq!(first, second);
+    assert_ne!(first, other);
+}
+
+#[test]
+fn error_propagates_as_std_error() {
+    fn parse_with_question_mark() -> Result<(), Box<dyn std::error::Error>> {
+        Password::parse("a".repeat(129))?;
+        Ok(())
+    }
+
+    let err = parse_with_question_mark().expect_err("propagates the rejection");
+    assert_eq!(err.to_string(), PasswordError::TooLong.to_string());
 }
