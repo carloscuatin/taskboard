@@ -48,3 +48,37 @@ fn rejects_one_above_maximum() {
 
     assert_eq!(Password::parse(text).err(), Some(PasswordError::TooLong));
 }
+
+#[test]
+fn counts_characters_not_bytes() {
+    let enough = "ñ".repeat(15);
+    let one_short = "ñ".repeat(14);
+    assert_eq!(enough.len(), 30);
+    assert_eq!(one_short.len(), 28);
+
+    assert!(Password::parse(enough).is_ok());
+    assert_eq!(
+        Password::parse(one_short).err(),
+        Some(PasswordError::TooShort)
+    );
+}
+
+#[test]
+fn keeps_surrounding_spaces() {
+    let text = format!(" {} ", "a".repeat(13));
+    assert_eq!(text.chars().count(), 15);
+
+    let password = Password::parse(text.clone()).expect("spaces count as characters");
+
+    assert_eq!(password.expose(), text);
+}
+
+#[test]
+fn applies_no_composition_rules() {
+    let lowercase_only = "a".repeat(15);
+    let mixed = "mi clave ñandú😀";
+    assert_eq!(mixed.chars().count(), 15);
+
+    assert!(Password::parse(lowercase_only).is_ok());
+    assert!(Password::parse(mixed.to_string()).is_ok());
+}
