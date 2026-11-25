@@ -82,3 +82,17 @@ fn applies_no_composition_rules() {
     assert!(Password::parse(lowercase_only).is_ok());
     assert!(Password::parse(mixed.to_string()).is_ok());
 }
+
+#[test]
+fn debug_hides_plaintext() {
+    let password = Password::parse("horse-battery-staple".to_string()).expect("valid password");
+
+    assert!(!format!("{password:?}").contains("horse-battery-staple"));
+}
+
+#[test]
+fn rejection_does_not_carry_password() {
+    let error = Password::parse("tiny-secret".to_string()).expect_err("too short");
+
+    assert!(!format!("{error:?}").contains("tiny-secret"));
+}
