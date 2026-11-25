@@ -16,12 +16,6 @@ pub use error::PasswordError;
 /// ```
 pub struct Password(String);
 
-impl fmt::Debug for Password {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("Password(<redacted>)")
-    }
-}
-
 impl Password {
     pub const MIN_LEN: usize = 15;
     pub const MAX_LEN: usize = 128;
@@ -42,6 +36,12 @@ impl Password {
 
     pub fn expose(&self) -> &str {
         &self.0
+    }
+}
+
+impl fmt::Debug for Password {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Password(<redacted>)")
     }
 }
 

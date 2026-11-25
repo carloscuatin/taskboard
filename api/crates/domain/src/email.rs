@@ -19,12 +19,6 @@ use rules::{check_characters, check_domain, check_length, check_local_part, spli
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Email(String);
 
-impl fmt::Display for Email {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
 impl Email {
     pub const MAX_LEN: usize = 254;
     pub const MAX_LOCAL_LEN: usize = 64;
@@ -45,6 +39,12 @@ impl Email {
 
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+}
+
+impl fmt::Display for Email {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
     }
 }
 
