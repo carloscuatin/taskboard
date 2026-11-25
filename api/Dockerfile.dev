@@ -3,7 +3,7 @@ FROM rust:1.100-slim
 RUN apt-get update && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends git pkg-config libssl-dev \
     && rm -rf /var/lib/apt/lists/* \
-    && rustup component add rustfmt clippy \
+    && rustup component add rustfmt clippy rust-analyzer \
     && cargo install cargo-deny --locked \
     && cargo install watchexec-cli --locked --version 2.8.0
 
