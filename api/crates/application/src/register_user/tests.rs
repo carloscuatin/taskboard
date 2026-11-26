@@ -1,6 +1,9 @@
+use std::error::Error;
+
+use taskboard_domain::{Email, Password, PasswordHash};
+
 use super::*;
 use crate::test_support::{EventLog, FakeHasher, InMemoryUserRepository, block_on};
-use taskboard_domain::{Email, Password, PasswordHash};
 
 fn email(text: &str) -> Email {
     Email::parse(text).expect("a valid email")
@@ -142,4 +145,80 @@ fn hashing_failure_stops_before_saving() {
     );
     assert_eq!(use_case.repository.attempts(), 0);
     assert!(use_case.repository.saved().is_empty());
+}
+
+#[test]
+fn store_failure_keeps_its_cause() {
+    let use_case = RegisterUser::new(
+        InMemoryUserRepository::default().failing_with("connection refused"),
+        FakeHasher::default(),
+    );
+
+    let error =
+        block_on(use_case.execute(email("user@example.com"), password("horse-battery-staple")))
+            .expect_err("the store fails");
+
+    assert!(matches!(error, RegisterUserError::Unexpected(_)));
+    let cause = error.source().expect("an unexpected error has a cause");
+    assert_eq!(cause.to_string(), "connection refused");
+}
+
+#[test]
+fn hashing_failure_keeps_its_cause() {
+    let use_case = RegisterUser::new(
+        InMemoryUserRepository::default(),
+        FakeHasher::default().failing_with("hasher unavailable"),
+    );
+
+    let error =
+        block_on(use_case.execute(email("user@example.com"), password("horse-battery-staple")))
+            .expect_err("the hasher fails");
+
+    assert!(matches!(error, RegisterUserError::Unexpected(_)));
+    let cause = error.source().expect("an unexpected error has a cause");
+    assert_eq!(cause.to_string(), "hasher unavailable");
+}
+
+#[test]
+fn errors_do_not_carry_password() {
+    let duplicate = RegisterUser::new(
+        InMemoryUserRepository::default().taking_every_email(),
+        FakeHasher::default(),
+    );
+    let failing = RegisterUser::new(
+        InMemoryUserRepository::default().failing_with("connection refused"),
+        FakeHasher::default(),
+    );
+
+    let errors = [
+        block_on(duplicate.execute(email("user@example.com"), password("horse-battery-staple")))
+            .expect_err("a duplicate"),
+        block_on(failing.execute(email("user@example.com"), password("horse-battery-staple")))
+            .expect_err("a failing store"),
+    ];
+
+    for error in errors {
+        assert!(!format!("{error:?}").contains("horse-battery-staple"));
+        assert!(!format!("{error}").contains("horse-battery-staple"));
+    }
+}
+
+#[test]
+fn error_propagates_as_std_error() {
+    fn register_with_question_mark() -> Result<(), Box<dyn Error>> {
+        let use_case = RegisterUser::new(
+            InMemoryUserRepository::default().taking_every_email(),
+            FakeHasher::default(),
+        );
+        block_on(use_case.execute(email("user@example.com"), password("horse-battery-staple")))?;
+        Ok(())
+    }
+
+    let error = register_with_question_mark().expect_err("propagates the duplicate");
+
+    assert!(!error.to_string().is_empty());
+    assert_eq!(
+        error.to_string(),
+        RegisterUserError::EmailAlreadyRegistered.to_string()
+    );
 }

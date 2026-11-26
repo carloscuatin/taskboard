@@ -23,9 +23,10 @@ pub fn block_on<F: Future>(future: F) -> F::Output {
 
 #[cfg(test)]
 mod tests {
+    use taskboard_domain::{Email, Password, PasswordHash};
+
     use super::*;
     use crate::{AddUserError, PasswordHasher, UserRepository};
-    use taskboard_domain::{Email, Password, PasswordHash};
 
     fn email(text: &str) -> Email {
         Email::parse(text).expect("a valid email")

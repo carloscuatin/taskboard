@@ -1,12 +1,10 @@
+mod error;
+
+pub use error::RegisterUserError;
+
 use taskboard_domain::{Email, Password};
 
-use crate::{AddUserError, BoxError, PasswordHasher, UserRepository};
-
-#[derive(Debug)]
-pub enum RegisterUserError {
-    Unexpected(BoxError),
-    EmailAlreadyRegistered,
-}
+use crate::{AddUserError, PasswordHasher, UserRepository};
 
 pub struct RegisterUser<R, H> {
     repository: R,
