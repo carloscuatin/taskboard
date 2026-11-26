@@ -222,3 +222,12 @@ fn error_propagates_as_std_error() {
         RegisterUserError::EmailAlreadyRegistered.to_string()
     );
 }
+
+#[test]
+fn execute_future_is_send() {
+    fn assert_send<T: Send>(_: T) {}
+
+    let use_case = use_case();
+
+    assert_send(use_case.execute(email("user@example.com"), password("horse-battery-staple")));
+}
