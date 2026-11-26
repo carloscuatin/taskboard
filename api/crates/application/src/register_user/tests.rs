@@ -1,5 +1,5 @@
 use super::*;
-use crate::test_support::{FakeHasher, InMemoryUserRepository, block_on};
+use crate::test_support::{EventLog, FakeHasher, InMemoryUserRepository, block_on};
 use taskboard_domain::{Email, Password, PasswordHash};
 
 fn email(text: &str) -> Email {
@@ -104,5 +104,42 @@ fn detects_duplicate_when_saving() {
         Err(RegisterUserError::EmailAlreadyRegistered)
     ));
     assert_eq!(use_case.repository.attempts(), 1);
+    assert!(use_case.repository.saved().is_empty());
+}
+
+#[test]
+fn hashes_before_saving_a_duplicate() {
+    let events = EventLog::default();
+    let use_case = RegisterUser::new(
+        InMemoryUserRepository::default().recording_in(&events),
+        FakeHasher::default().recording_in(&events),
+    );
+    block_on(use_case.execute(email("user@example.com"), password("horse-battery-staple")))
+        .expect("registers the first time");
+
+    let result =
+        block_on(use_case.execute(email("user@example.com"), password("correct-horse-battery")));
+
+    assert!(matches!(
+        result,
+        Err(RegisterUserError::EmailAlreadyRegistered)
+    ));
+    assert_eq!(events.events(), vec!["hash", "add", "hash", "add"]);
+}
+
+#[test]
+fn hashing_failure_stops_before_saving() {
+    let use_case = RegisterUser::new(
+        InMemoryUserRepository::default(),
+        FakeHasher::default().failing_with("hasher is down"),
+    );
+
+    let result =
+        block_on(use_case.execute(email("user@example.com"), password("horse-battery-staple")));
+
+    assert!(
+        matches!(result, Err(RegisterUserError::Unexpected(cause)) if cause.to_string() == "hasher is down")
+    );
+    assert_eq!(use_case.repository.attempts(), 0);
     assert!(use_case.repository.saved().is_empty());
 }

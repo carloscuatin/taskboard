@@ -1,9 +1,11 @@
 use std::pin::pin;
 use std::task::{Context, Poll, Waker};
 
+mod event_log;
 mod fake_hasher;
 mod in_memory_user_repository;
 
+pub use event_log::EventLog;
 pub use fake_hasher::FakeHasher;
 pub use in_memory_user_repository::InMemoryUserRepository;
 

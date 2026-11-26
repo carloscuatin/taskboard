@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use taskboard_domain::{Email, PasswordHash};
 
+use crate::test_support::EventLog;
 use crate::{AddUserError, UserRepository};
 
 #[derive(Default)]
@@ -11,6 +12,7 @@ pub struct InMemoryUserRepository {
     attempts: AtomicUsize,
     email_taken: bool,
     failure: Option<String>,
+    log: Option<EventLog>,
 }
 
 impl InMemoryUserRepository {
@@ -21,6 +23,11 @@ impl InMemoryUserRepository {
 
     pub fn failing_with(mut self, message: &str) -> Self {
         self.failure = Some(message.to_string());
+        self
+    }
+
+    pub fn recording_in(mut self, log: &EventLog) -> Self {
+        self.log = Some(log.clone());
         self
     }
 
@@ -36,6 +43,9 @@ impl InMemoryUserRepository {
 impl UserRepository for InMemoryUserRepository {
     async fn add(&self, email: &Email, password_hash: &PasswordHash) -> Result<(), AddUserError> {
         self.attempts.fetch_add(1, Ordering::SeqCst);
+        if let Some(log) = &self.log {
+            log.record("add");
+        }
 
         if let Some(message) = &self.failure {
             return Err(AddUserError::Unexpected(message.clone().into()));

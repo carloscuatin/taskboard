@@ -2,17 +2,24 @@ use std::sync::Mutex;
 
 use taskboard_domain::{Password, PasswordHash};
 
+use crate::test_support::EventLog;
 use crate::{BoxError, PasswordHasher};
 
 #[derive(Default)]
 pub struct FakeHasher {
     received: Mutex<Vec<String>>,
     failure: Option<String>,
+    log: Option<EventLog>,
 }
 
 impl FakeHasher {
     pub fn failing_with(mut self, message: &str) -> Self {
         self.failure = Some(message.to_string());
+        self
+    }
+
+    pub fn recording_in(mut self, log: &EventLog) -> Self {
+        self.log = Some(log.clone());
         self
     }
 
@@ -27,6 +34,9 @@ impl FakeHasher {
 
 impl PasswordHasher for FakeHasher {
     async fn hash(&self, password: Password) -> Result<PasswordHash, BoxError> {
+        if let Some(log) = &self.log {
+            log.record("hash");
+        }
         self.received
             .lock()
             .expect("received lock")

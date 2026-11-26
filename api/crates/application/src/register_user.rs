@@ -18,6 +18,8 @@ impl<R: UserRepository, H: PasswordHasher> RegisterUser<R, H> {
         Self { repository, hasher }
     }
 
+    /// The password is hashed even when the email turns out to be taken, so a registered
+    /// email does not answer faster than a new one.
     pub async fn execute(&self, email: Email, password: Password) -> Result<(), RegisterUserError> {
         let hash = self
             .hasher
