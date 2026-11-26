@@ -5,6 +5,7 @@ use crate::{AddUserError, BoxError, PasswordHasher, UserRepository};
 #[derive(Debug)]
 pub enum RegisterUserError {
     Unexpected(BoxError),
+    EmailAlreadyRegistered,
 }
 
 pub struct RegisterUser<R, H> {
@@ -27,9 +28,7 @@ impl<R: UserRepository, H: PasswordHasher> RegisterUser<R, H> {
         match self.repository.add(&email, &hash).await {
             Ok(()) => Ok(()),
             Err(AddUserError::Unexpected(cause)) => Err(RegisterUserError::Unexpected(cause)),
-            Err(AddUserError::EmailTaken) => Err(RegisterUserError::Unexpected(
-                "the email is already registered".into(),
-            )),
+            Err(AddUserError::EmailTaken) => Err(RegisterUserError::EmailAlreadyRegistered),
         }
     }
 }

@@ -52,3 +52,57 @@ fn registers_different_emails() {
         ]
     );
 }
+
+#[test]
+fn rejects_same_email_twice() {
+    let use_case = use_case();
+    block_on(use_case.execute(email("user@example.com"), password("horse-battery-staple")))
+        .expect("registers the first time");
+
+    let result =
+        block_on(use_case.execute(email("user@example.com"), password("correct-horse-battery")));
+
+    assert!(matches!(
+        result,
+        Err(RegisterUserError::EmailAlreadyRegistered)
+    ));
+    assert_eq!(
+        use_case.repository.saved(),
+        vec![(email("user@example.com"), fake_hash())]
+    );
+}
+
+#[test]
+fn rejects_email_that_normalizes_the_same() {
+    let use_case = use_case();
+    block_on(use_case.execute(email("user@example.com"), password("horse-battery-staple")))
+        .expect("registers the first time");
+
+    let result = block_on(use_case.execute(
+        email(" User@Example.COM "),
+        password("horse-battery-staple"),
+    ));
+
+    assert!(matches!(
+        result,
+        Err(RegisterUserError::EmailAlreadyRegistered)
+    ));
+}
+
+#[test]
+fn detects_duplicate_when_saving() {
+    let use_case = RegisterUser::new(
+        InMemoryUserRepository::default().taking_every_email(),
+        FakeHasher::default(),
+    );
+
+    let result =
+        block_on(use_case.execute(email("user@example.com"), password("horse-battery-staple")));
+
+    assert!(matches!(
+        result,
+        Err(RegisterUserError::EmailAlreadyRegistered)
+    ));
+    assert_eq!(use_case.repository.attempts(), 1);
+    assert!(use_case.repository.saved().is_empty());
+}
