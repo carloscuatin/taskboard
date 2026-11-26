@@ -6,8 +6,10 @@ A multi-user API for projects and tasks. Users register, log in and belong to pr
 
 ## Current status
 
-The four API crates and the Vue app build, and every gate passes. The domain has its first value
-object, `Email`, which can only be obtained by parsing text.
+The four API crates and the Vue app build, and every gate passes. The domain has the value objects
+`Email` and `Password`, which can only be obtained by parsing text, and an opaque `PasswordHash`.
+`application` has the register user use case with its ports, `UserRepository` and
+`PasswordHasher`; no adapter, endpoint or table implements them yet.
 
 ## Decisions
 
@@ -23,6 +25,11 @@ depends on `domain`; `adapters` (Postgres, hashing, tokens) depends on `applicat
 wiring) depends on both. The compiler rejects an import against the arrow. `cargo deny` closes the
 other gap: `sqlx`, `argon2`, `jsonwebtoken`, `axum`, `utoipa` and `tokio` may be dependencies of the
 outer crates only.
+
+**Ports are traits in `application`** whose methods return a `Send` future
+(`-> impl Future<Output = ...> + Send`), because a plain `async fn` in a public trait cannot promise
+`Send`. A use case is generic over its ports and is tested with hand-written doubles and a minimal
+`block_on` from the standard library, with no runtime, database or third-party crate.
 
 **Everything runs in Docker.** Rust, Node and Postgres never run on the host, because build scripts
 and procedural macros of third-party crates would otherwise execute on it. Build output and
@@ -45,5 +52,18 @@ validated in CI and the local hook only checks formatting).
   `viewer`); the global `admin` role only manages users.
 - Input is validated at the edge, and domain errors are translated to HTTP without leaking
   internals.
+- A password is 15 to 128 characters, counted as Unicode code points. It is kept exactly as typed,
+  with no trimming and no composition rules.
 - The identity of a user is their email address in its normalized form: trimmed and lowercased as
   ASCII. Internationalized domains are accepted in their `xn--` form only.
+
+### 3. Rust code layout
+
+- Imports go in three groups separated by a blank line: `std`, external crates, then `crate` and
+  `super`. `rustfmt` sorts each group but cannot create the groups on the stable toolchain.
+- In a file the main type comes first, then its inherent `impl`, then its trait impls.
+- The error of a type lives in an `error.rs` next to it, and so do private helpers in `rules.rs`.
+- Unit tests live in a `tests.rs` child module (`#[cfg(test)] mod tests;`), so they can reach the
+  private fields of their parent.
+- A comment says why, never what: it stays only if deleting it leaves something that the code does
+  not show.
