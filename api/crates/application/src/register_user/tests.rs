@@ -4,6 +4,7 @@ use taskboard_domain::{Email, Password, PasswordHash};
 
 use super::*;
 use crate::test_support::{EventLog, FakeHasher, InMemoryUserRepository, block_on};
+use crate::{PasswordHasher, UserRepository};
 
 fn email(text: &str) -> Email {
     Email::parse(text).expect("a valid email")
@@ -13,8 +14,8 @@ fn password(text: &str) -> Password {
     Password::parse(text.to_string()).expect("a valid password")
 }
 
-fn fake_hash() -> PasswordHash {
-    PasswordHash::new("fake-hash-value".to_string())
+fn hash_of(text: &str) -> PasswordHash {
+    block_on(FakeHasher::default().hash(password(text))).expect("hashes")
 }
 
 fn use_case() -> RegisterUser<InMemoryUserRepository, FakeHasher> {
@@ -31,7 +32,7 @@ fn registers_new_email() {
     assert_eq!(use_case.hasher.received(), vec!["horse-battery-staple"]);
     assert_eq!(
         use_case.repository.saved(),
-        vec![(email("user@example.com"), fake_hash())]
+        vec![(email("user@example.com"), hash_of("horse-battery-staple"))]
     );
 }
 
@@ -50,8 +51,11 @@ fn registers_different_emails() {
     assert_eq!(
         use_case.repository.saved(),
         vec![
-            (email("first@example.com"), fake_hash()),
-            (email("second@example.com"), fake_hash()),
+            (email("first@example.com"), hash_of("horse-battery-staple")),
+            (
+                email("second@example.com"),
+                hash_of("correct-horse-battery")
+            ),
         ]
     );
 }
@@ -71,7 +75,7 @@ fn rejects_same_email_twice() {
     ));
     assert_eq!(
         use_case.repository.saved(),
-        vec![(email("user@example.com"), fake_hash())]
+        vec![(email("user@example.com"), hash_of("horse-battery-staple"))]
     );
 }
 
@@ -227,7 +231,9 @@ fn error_propagates_as_std_error() {
 fn execute_future_is_send() {
     fn assert_send<T: Send>(_: T) {}
 
-    let use_case = use_case();
+    fn with_any_ports<R: UserRepository, H: PasswordHasher>(use_case: &RegisterUser<R, H>) {
+        assert_send(use_case.execute(email("user@example.com"), password("horse-battery-staple")));
+    }
 
-    assert_send(use_case.execute(email("user@example.com"), password("horse-battery-staple")));
+    with_any_ports(&use_case());
 }

@@ -1,3 +1,5 @@
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::sync::Mutex;
 
 use taskboard_domain::{Password, PasswordHash};
@@ -46,6 +48,11 @@ impl PasswordHasher for FakeHasher {
             return Err(message.clone().into());
         }
 
-        Ok(PasswordHash::new("fake-hash-value".to_string()))
+        let mut hasher = DefaultHasher::new();
+        password.expose().hash(&mut hasher);
+        Ok(PasswordHash::new(format!(
+            "fake-hash-{:x}",
+            hasher.finish()
+        )))
     }
 }

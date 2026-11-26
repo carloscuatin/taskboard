@@ -103,18 +103,24 @@ mod tests {
     }
 
     #[test]
-    fn hasher_returns_a_fixed_hash_and_remembers_the_calls() {
+    fn hasher_derives_the_hash_from_the_password_and_remembers_the_calls() {
         let hasher = FakeHasher::default();
 
         let first = block_on(hasher.hash(password("horse-battery-staple"))).expect("hashes");
         let second = block_on(hasher.hash(password("correct-horse-battery"))).expect("hashes");
+        let again = block_on(hasher.hash(password("horse-battery-staple"))).expect("hashes");
 
-        assert_eq!(first, second);
+        assert_eq!(first, again);
+        assert_ne!(first, second);
         assert!(!first.as_str().contains("horse"));
-        assert_eq!(hasher.calls(), 2);
+        assert_eq!(hasher.calls(), 3);
         assert_eq!(
             hasher.received(),
-            vec!["horse-battery-staple", "correct-horse-battery"]
+            vec![
+                "horse-battery-staple",
+                "correct-horse-battery",
+                "horse-battery-staple"
+            ]
         );
     }
 
