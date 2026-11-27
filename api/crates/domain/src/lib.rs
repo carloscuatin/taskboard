@@ -1,7 +1,13 @@
 mod email;
+mod password;
+mod password_hash;
 
 pub use email::Email;
 pub use email::EmailError;
+
+pub use password::Password;
+pub use password::PasswordError;
+pub use password_hash::PasswordHash;
 
 #[cfg(test)]
 mod tests {
