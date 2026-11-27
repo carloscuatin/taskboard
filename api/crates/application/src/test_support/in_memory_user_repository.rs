@@ -1,14 +1,14 @@
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use taskboard_domain::{Email, PasswordHash};
+use taskboard_domain::{Email, PasswordHash, User, UserId};
 
 use crate::test_support::EventLog;
-use crate::{AddUserError, UserRepository};
+use crate::{AddUserError, BoxError, UserRepository};
 
 #[derive(Default)]
 pub struct InMemoryUserRepository {
-    saved: Mutex<Vec<(Email, PasswordHash)>>,
+    users: Mutex<Vec<User>>,
     attempts: AtomicUsize,
     email_taken: bool,
     failure: Option<String>,
@@ -32,7 +32,14 @@ impl InMemoryUserRepository {
     }
 
     pub fn saved(&self) -> Vec<(Email, PasswordHash)> {
-        self.saved.lock().expect("saved lock").clone()
+        self.users()
+            .into_iter()
+            .map(|user| (user.email().clone(), user.password_hash().clone()))
+            .collect()
+    }
+
+    pub fn users(&self) -> Vec<User> {
+        self.users.lock().expect("users lock").clone()
     }
 
     pub fn attempts(&self) -> usize {
@@ -51,12 +58,26 @@ impl UserRepository for InMemoryUserRepository {
             return Err(AddUserError::Unexpected(message.clone().into()));
         }
 
-        let mut saved = self.saved.lock().expect("saved lock");
-        if self.email_taken || saved.iter().any(|(existing, _)| existing == email) {
+        let mut users = self.users.lock().expect("users lock");
+        if self.email_taken || users.iter().any(|user| user.email() == email) {
             return Err(AddUserError::EmailTaken);
         }
 
-        saved.push((email.clone(), password_hash.clone()));
+        let id = UserId::from_u128(users.len() as u128 + 1);
+        users.push(User::new(id, email.clone(), password_hash.clone()));
         Ok(())
+    }
+
+    async fn find_by_email(&self, email: &Email) -> Result<Option<User>, BoxError> {
+        if let Some(log) = &self.log {
+            log.record("find");
+        }
+
+        if let Some(message) = &self.failure {
+            return Err(message.clone().into());
+        }
+
+        let users = self.users.lock().expect("users lock");
+        Ok(users.iter().find(|user| user.email() == email).cloned())
     }
 }
