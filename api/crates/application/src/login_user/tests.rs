@@ -3,10 +3,10 @@ use std::error::Error;
 use taskboard_domain::PasswordHash;
 
 use super::*;
-use crate::UserRepository;
 use crate::test_support::{
     FakeVerifier, InMemoryUserRepository, assert_cause, block_on, email, fake_hash, password,
 };
+use crate::{PasswordVerifier, UserRepository};
 
 fn decoy() -> PasswordHash {
     PasswordHash::new("decoy-hash".to_string())
@@ -248,4 +248,15 @@ fn error_propagates_as_std_error() {
         error.to_string(),
         LoginUserError::InvalidCredentials.to_string()
     );
+}
+
+#[test]
+fn execute_future_is_send() {
+    fn assert_send<T: Send>(_: T) {}
+
+    fn with_any_ports<R: UserRepository, V: PasswordVerifier>(use_case: &LoginUser<R, V>) {
+        assert_send(use_case.execute(email("user@example.com"), password("horse-battery-staple")));
+    }
+
+    with_any_ports(&use_case(&[]));
 }
