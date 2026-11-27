@@ -118,3 +118,35 @@ fn unknown_email_and_wrong_password_look_the_same() {
     assert_eq!(unknown.to_string(), wrong.to_string());
     assert_eq!(format!("{unknown:?}"), format!("{wrong:?}"));
 }
+
+#[test]
+fn verifies_an_unknown_email_against_the_decoy() {
+    let use_case = use_case(&[]);
+
+    let _ = block_on(use_case.execute(
+        email("nobody@example.com"),
+        password("horse-battery-staple"),
+    ));
+
+    assert_eq!(
+        use_case.verifier.received(),
+        vec![("horse-battery-staple".to_string(), decoy())]
+    );
+}
+
+#[test]
+fn a_decoy_that_matches_never_logs_anyone_in() {
+    let use_case = LoginUser::new(
+        InMemoryUserRepository::default(),
+        FakeVerifier::default().matching_every_hash(),
+        decoy(),
+    );
+
+    let result = block_on(use_case.execute(
+        email("nobody@example.com"),
+        password("horse-battery-staple"),
+    ));
+
+    assert!(matches!(result, Err(LoginUserError::InvalidCredentials)));
+    assert_eq!(use_case.verifier.calls(), 1);
+}
