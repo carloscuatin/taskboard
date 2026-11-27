@@ -66,3 +66,55 @@ fn returns_only_the_user_of_the_given_email() {
     assert_eq!(user, use_case.repository.users()[1]);
     assert_ne!(user.id(), use_case.repository.users()[0].id());
 }
+
+#[test]
+fn rejects_a_wrong_password() {
+    let use_case = use_case(&[("user@example.com", "horse-battery-staple")]);
+
+    let result =
+        block_on(use_case.execute(email("user@example.com"), password("correct-horse-battery")));
+
+    assert!(matches!(result, Err(LoginUserError::InvalidCredentials)));
+}
+
+#[test]
+fn rejects_an_unknown_email() {
+    let use_case = use_case(&[]);
+
+    let result =
+        block_on(use_case.execute(email("user@example.com"), password("horse-battery-staple")));
+
+    assert!(matches!(result, Err(LoginUserError::InvalidCredentials)));
+}
+
+#[test]
+fn rejects_the_password_of_another_user() {
+    let use_case = use_case(&[
+        ("first@example.com", "horse-battery-staple"),
+        ("second@example.com", "correct-horse-battery"),
+    ]);
+
+    let result = block_on(use_case.execute(
+        email("first@example.com"),
+        password("correct-horse-battery"),
+    ));
+
+    assert!(matches!(result, Err(LoginUserError::InvalidCredentials)));
+}
+
+#[test]
+fn unknown_email_and_wrong_password_look_the_same() {
+    let use_case = use_case(&[("user@example.com", "horse-battery-staple")]);
+
+    let unknown = block_on(use_case.execute(
+        email("nobody@example.com"),
+        password("horse-battery-staple"),
+    ))
+    .expect_err("rejects the unknown email");
+    let wrong =
+        block_on(use_case.execute(email("user@example.com"), password("correct-horse-battery")))
+            .expect_err("rejects the wrong password");
+
+    assert_eq!(unknown.to_string(), wrong.to_string());
+    assert_eq!(format!("{unknown:?}"), format!("{wrong:?}"));
+}

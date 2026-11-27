@@ -29,7 +29,7 @@ impl<R: UserRepository, V: PasswordVerifier> LoginUser<R, V> {
             .await
             .map_err(LoginUserError::Unexpected)?;
         let Some(user) = found else {
-            todo!("an unknown email is rejected like a wrong password")
+            return Err(LoginUserError::InvalidCredentials);
         };
 
         let matches = self
@@ -38,7 +38,7 @@ impl<R: UserRepository, V: PasswordVerifier> LoginUser<R, V> {
             .await
             .map_err(LoginUserError::Unexpected)?;
         if !matches {
-            todo!("a wrong password is rejected")
+            return Err(LoginUserError::InvalidCredentials);
         }
 
         Ok(user)
