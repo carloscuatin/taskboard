@@ -7,7 +7,7 @@ mod fake_verifier;
 mod in_memory_user_repository;
 
 pub use event_log::EventLog;
-pub use fake_hasher::FakeHasher;
+pub use fake_hasher::{FakeHasher, fake_hash};
 pub use fake_verifier::FakeVerifier;
 pub use in_memory_user_repository::InMemoryUserRepository;
 
