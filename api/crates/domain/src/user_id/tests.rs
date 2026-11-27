@@ -4,9 +4,11 @@ use super::*;
 
 #[test]
 fn reads_back_the_value_it_was_built_with() {
-    let id = UserId::from_u128(7);
+    let small = UserId::from_u128(7);
+    let largest = UserId::from_u128(u128::MAX);
 
-    assert_eq!(id.as_u128(), 7);
+    assert_eq!(small.as_u128(), 7);
+    assert_eq!(largest.as_u128(), u128::MAX);
 }
 
 #[test]
