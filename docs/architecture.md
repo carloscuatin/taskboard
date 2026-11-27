@@ -7,9 +7,11 @@ A multi-user API for projects and tasks. Users register, log in and belong to pr
 ## Current status
 
 The four API crates and the Vue app build, and every gate passes. The domain has the value objects
-`Email` and `Password`, which can only be obtained by parsing text, and an opaque `PasswordHash`.
-`application` has the register user use case with its ports, `UserRepository` and
-`PasswordHasher`; no adapter, endpoint or table implements them yet.
+`Email` and `Password`, which can only be obtained by parsing text, an opaque `PasswordHash`, an
+opaque `UserId` and the `User` entity that holds an id, an email and a password hash.
+`application` has the register user and login use cases with their ports, `UserRepository`
+(`add` and `find_by_email`), `PasswordHasher` and `PasswordVerifier`; no adapter, endpoint or table
+implements them yet, and login does not issue tokens yet.
 
 ## Decisions
 
@@ -56,6 +58,11 @@ validated in CI and the local hook only checks formatting).
   with no trimming and no composition rules.
 - The identity of a user is their email address in its normalized form: trimmed and lowercased as
   ASCII. Internationalized domains are accepted in their `xn--` form only.
+- A user id is an opaque 128-bit number that the store assigns, never the domain. It fits a
+  Postgres `uuid` exactly and reveals nothing about how many users exist.
+- Login answers an unknown email and a wrong password with the same single error. When the email is
+  unknown the password is still verified once, against a decoy hash computed with the real hasher,
+  and the result is discarded, so the two cases take the same time.
 
 ### 3. Rust code layout
 
