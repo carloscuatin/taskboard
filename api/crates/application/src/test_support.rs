@@ -3,10 +3,12 @@ use std::task::{Context, Poll, Waker};
 
 mod event_log;
 mod fake_hasher;
+mod fake_verifier;
 mod in_memory_user_repository;
 
 pub use event_log::EventLog;
 pub use fake_hasher::FakeHasher;
+pub use fake_verifier::FakeVerifier;
 pub use in_memory_user_repository::InMemoryUserRepository;
 
 /// Runs a future that must finish on its first poll, which every double here does:
@@ -26,7 +28,7 @@ mod tests {
     use taskboard_domain::{Email, Password, PasswordHash};
 
     use super::*;
-    use crate::{AddUserError, PasswordHasher, UserRepository};
+    use crate::{AddUserError, PasswordHasher, PasswordVerifier, UserRepository};
 
     fn email(text: &str) -> Email {
         Email::parse(text).expect("a valid email")
@@ -122,6 +124,107 @@ mod tests {
                 "horse-battery-staple"
             ]
         );
+    }
+
+    #[test]
+    fn repository_finds_what_it_saved() {
+        let repository = InMemoryUserRepository::default();
+        block_on(repository.add(&email("ana@example.com"), &hash("hash-a"))).expect("saves");
+        block_on(repository.add(&email("ben@example.com"), &hash("hash-b"))).expect("saves");
+
+        let found = block_on(repository.find_by_email(&email("ben@example.com")))
+            .expect("looks up")
+            .expect("finds ben");
+
+        assert_eq!(found.email(), &email("ben@example.com"));
+        assert_eq!(found.password_hash(), &hash("hash-b"));
+        assert_eq!(repository.users()[1], found);
+    }
+
+    #[test]
+    fn repository_gives_each_saved_user_its_own_id() {
+        let repository = InMemoryUserRepository::default();
+        block_on(repository.add(&email("ana@example.com"), &hash("hash-a"))).expect("saves");
+        block_on(repository.add(&email("ben@example.com"), &hash("hash-b"))).expect("saves");
+
+        let users = repository.users();
+
+        assert_ne!(users[0].id(), users[1].id());
+    }
+
+    #[test]
+    fn repository_answers_none_for_an_unknown_email() {
+        let repository = InMemoryUserRepository::default();
+        block_on(repository.add(&email("ana@example.com"), &hash("hash-a"))).expect("saves");
+
+        let found =
+            block_on(repository.find_by_email(&email("ben@example.com"))).expect("looks up");
+
+        assert!(found.is_none());
+    }
+
+    #[test]
+    fn repository_can_be_told_to_fail_when_looking_up() {
+        let repository = InMemoryUserRepository::default().failing_with("store is down");
+
+        let result = block_on(repository.find_by_email(&email("ana@example.com")));
+
+        assert!(matches!(result, Err(cause) if cause.to_string() == "store is down"));
+    }
+
+    #[test]
+    fn repository_notes_a_lookup_in_the_event_log() {
+        let log = EventLog::default();
+        let repository = InMemoryUserRepository::default().recording_in(&log);
+
+        block_on(repository.find_by_email(&email("ana@example.com"))).expect("looks up");
+
+        assert_eq!(log.events(), vec!["find"]);
+    }
+
+    #[test]
+    fn verifier_matches_the_hash_the_fake_hasher_gives() {
+        let hasher = FakeHasher::default();
+        let verifier = FakeVerifier::default();
+        let stored = block_on(hasher.hash(password("horse-battery-staple"))).expect("hashes");
+
+        let right = block_on(verifier.verify(password("horse-battery-staple"), &stored));
+        let wrong = block_on(verifier.verify(password("correct-horse-battery"), &stored));
+
+        assert!(matches!(right, Ok(true)));
+        assert!(matches!(wrong, Ok(false)));
+    }
+
+    #[test]
+    fn verifier_remembers_the_calls() {
+        let verifier = FakeVerifier::default();
+
+        block_on(verifier.verify(password("horse-battery-staple"), &hash("hash-a"))).expect("runs");
+
+        assert_eq!(verifier.calls(), 1);
+        assert_eq!(
+            verifier.received(),
+            vec![("horse-battery-staple".to_string(), hash("hash-a"))]
+        );
+    }
+
+    #[test]
+    fn verifier_can_be_told_everything_matches() {
+        let verifier = FakeVerifier::default().matching_every_hash();
+
+        let result = block_on(verifier.verify(password("horse-battery-staple"), &hash("any")));
+
+        assert!(matches!(result, Ok(true)));
+    }
+
+    #[test]
+    fn verifier_can_be_told_to_fail() {
+        let verifier = FakeVerifier::default().failing_with("verifier is down");
+
+        let result = block_on(verifier.verify(password("horse-battery-staple"), &hash("any")));
+
+        assert!(matches!(result, Err(cause) if cause.to_string() == "verifier is down"));
+        assert_eq!(verifier.calls(), 1);
     }
 
     #[test]

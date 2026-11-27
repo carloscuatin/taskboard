@@ -48,11 +48,13 @@ impl PasswordHasher for FakeHasher {
             return Err(message.clone().into());
         }
 
-        let mut hasher = DefaultHasher::new();
-        password.expose().hash(&mut hasher);
-        Ok(PasswordHash::new(format!(
-            "fake-hash-{:x}",
-            hasher.finish()
-        )))
+        Ok(fake_hash(password.expose()))
     }
+}
+
+/// The hash the fake hasher gives a password, so the fake verifier can check against it.
+pub fn fake_hash(text: &str) -> PasswordHash {
+    let mut hasher = DefaultHasher::new();
+    text.hash(&mut hasher);
+    PasswordHash::new(format!("fake-hash-{:x}", hasher.finish()))
 }

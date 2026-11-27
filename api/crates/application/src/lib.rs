@@ -3,7 +3,7 @@ mod register_user;
 #[cfg(test)]
 mod test_support;
 
-pub use ports::{AddUserError, BoxError, PasswordHasher, UserRepository};
+pub use ports::{AddUserError, BoxError, PasswordHasher, PasswordVerifier, UserRepository};
 pub use register_user::{RegisterUser, RegisterUserError};
 
 #[cfg(test)]
