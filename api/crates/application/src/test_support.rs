@@ -1,11 +1,13 @@
 use std::pin::pin;
 use std::task::{Context, Poll, Waker};
 
+mod builders;
 mod event_log;
 mod fake_hasher;
 mod fake_verifier;
 mod in_memory_user_repository;
 
+pub use builders::{email, hash, password};
 pub use event_log::EventLog;
 pub use fake_hasher::{FakeHasher, fake_hash};
 pub use fake_verifier::FakeVerifier;
@@ -25,22 +27,8 @@ pub fn block_on<F: Future>(future: F) -> F::Output {
 
 #[cfg(test)]
 mod tests {
-    use taskboard_domain::{Email, Password, PasswordHash};
-
     use super::*;
     use crate::{AddUserError, PasswordHasher, PasswordVerifier, UserRepository};
-
-    fn email(text: &str) -> Email {
-        Email::parse(text).expect("a valid email")
-    }
-
-    fn hash(text: &str) -> PasswordHash {
-        PasswordHash::new(text.to_string())
-    }
-
-    fn password(text: &str) -> Password {
-        Password::parse(text.to_string()).expect("a valid password")
-    }
 
     #[test]
     fn block_on_returns_the_value_of_a_ready_future() {

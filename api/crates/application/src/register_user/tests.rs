@@ -1,22 +1,10 @@
 use std::error::Error;
 
-use taskboard_domain::{Email, Password, PasswordHash};
-
 use super::*;
-use crate::test_support::{EventLog, FakeHasher, InMemoryUserRepository, block_on};
+use crate::test_support::{
+    EventLog, FakeHasher, InMemoryUserRepository, block_on, email, fake_hash, password,
+};
 use crate::{PasswordHasher, UserRepository};
-
-fn email(text: &str) -> Email {
-    Email::parse(text).expect("a valid email")
-}
-
-fn password(text: &str) -> Password {
-    Password::parse(text.to_string()).expect("a valid password")
-}
-
-fn hash_of(text: &str) -> PasswordHash {
-    block_on(FakeHasher::default().hash(password(text))).expect("hashes")
-}
 
 fn use_case() -> RegisterUser<InMemoryUserRepository, FakeHasher> {
     RegisterUser::new(InMemoryUserRepository::default(), FakeHasher::default())
@@ -32,7 +20,7 @@ fn registers_new_email() {
     assert_eq!(use_case.hasher.received(), vec!["horse-battery-staple"]);
     assert_eq!(
         use_case.repository.saved(),
-        vec![(email("user@example.com"), hash_of("horse-battery-staple"))]
+        vec![(email("user@example.com"), fake_hash("horse-battery-staple"))]
     );
 }
 
@@ -51,10 +39,13 @@ fn registers_different_emails() {
     assert_eq!(
         use_case.repository.saved(),
         vec![
-            (email("first@example.com"), hash_of("horse-battery-staple")),
+            (
+                email("first@example.com"),
+                fake_hash("horse-battery-staple")
+            ),
             (
                 email("second@example.com"),
-                hash_of("correct-horse-battery")
+                fake_hash("correct-horse-battery")
             ),
         ]
     );
@@ -75,7 +66,7 @@ fn rejects_same_email_twice() {
     ));
     assert_eq!(
         use_case.repository.saved(),
-        vec![(email("user@example.com"), hash_of("horse-battery-staple"))]
+        vec![(email("user@example.com"), fake_hash("horse-battery-staple"))]
     );
 }
 

@@ -1,23 +1,17 @@
-use taskboard_domain::{Email, Password, PasswordHash};
+use taskboard_domain::PasswordHash;
 
 use super::*;
 use crate::UserRepository;
-use crate::test_support::{FakeVerifier, InMemoryUserRepository, block_on, fake_hash};
-
-fn email(text: &str) -> Email {
-    Email::parse(text).expect("a valid email")
-}
-
-fn password(text: &str) -> Password {
-    Password::parse(text.to_string()).expect("a valid password")
-}
+use crate::test_support::{
+    FakeVerifier, InMemoryUserRepository, block_on, email, fake_hash, password,
+};
 
 fn decoy() -> PasswordHash {
     PasswordHash::new("decoy-hash".to_string())
 }
 
 /// A use case whose store already holds one user per `(email, password)` pair.
-fn use_case_with(users: &[(&str, &str)]) -> LoginUser<InMemoryUserRepository, FakeVerifier> {
+fn use_case(users: &[(&str, &str)]) -> LoginUser<InMemoryUserRepository, FakeVerifier> {
     let repository = InMemoryUserRepository::default();
     for (address, secret) in users {
         block_on(repository.add(&email(address), &fake_hash(secret))).expect("saves the user");
@@ -27,7 +21,7 @@ fn use_case_with(users: &[(&str, &str)]) -> LoginUser<InMemoryUserRepository, Fa
 
 #[test]
 fn returns_the_stored_user_for_the_right_password() {
-    let use_case = use_case_with(&[("user@example.com", "horse-battery-staple")]);
+    let use_case = use_case(&[("user@example.com", "horse-battery-staple")]);
 
     let user =
         block_on(use_case.execute(email("user@example.com"), password("horse-battery-staple")))
@@ -45,7 +39,7 @@ fn returns_the_stored_user_for_the_right_password() {
 
 #[test]
 fn finds_the_user_by_the_normalized_email() {
-    let use_case = use_case_with(&[("user@example.com", "horse-battery-staple")]);
+    let use_case = use_case(&[("user@example.com", "horse-battery-staple")]);
 
     let user = block_on(use_case.execute(
         email(" User@Example.COM "),
@@ -58,7 +52,7 @@ fn finds_the_user_by_the_normalized_email() {
 
 #[test]
 fn returns_only_the_user_of_the_given_email() {
-    let use_case = use_case_with(&[
+    let use_case = use_case(&[
         ("first@example.com", "horse-battery-staple"),
         ("second@example.com", "correct-horse-battery"),
     ]);
