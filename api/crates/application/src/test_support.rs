@@ -1,12 +1,14 @@
 use std::pin::pin;
 use std::task::{Context, Poll, Waker};
 
+mod assertions;
 mod builders;
 mod event_log;
 mod fake_hasher;
 mod fake_verifier;
 mod in_memory_user_repository;
 
+pub use assertions::assert_cause;
 pub use builders::{email, hash, password};
 pub use event_log::EventLog;
 pub use fake_hasher::{FakeHasher, fake_hash};

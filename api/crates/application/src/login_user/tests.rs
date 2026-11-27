@@ -1,22 +1,28 @@
+use std::error::Error;
+
 use taskboard_domain::PasswordHash;
 
 use super::*;
 use crate::UserRepository;
 use crate::test_support::{
-    FakeVerifier, InMemoryUserRepository, block_on, email, fake_hash, password,
+    FakeVerifier, InMemoryUserRepository, assert_cause, block_on, email, fake_hash, password,
 };
 
 fn decoy() -> PasswordHash {
     PasswordHash::new("decoy-hash".to_string())
 }
 
-/// A use case whose store already holds one user per `(email, password)` pair.
-fn use_case(users: &[(&str, &str)]) -> LoginUser<InMemoryUserRepository, FakeVerifier> {
+/// A store that already holds one user per `(email, password)` pair.
+fn repository_with(users: &[(&str, &str)]) -> InMemoryUserRepository {
     let repository = InMemoryUserRepository::default();
     for (address, secret) in users {
         block_on(repository.add(&email(address), &fake_hash(secret))).expect("saves the user");
     }
-    LoginUser::new(repository, FakeVerifier::default(), decoy())
+    repository
+}
+
+fn use_case(users: &[(&str, &str)]) -> LoginUser<InMemoryUserRepository, FakeVerifier> {
+    LoginUser::new(repository_with(users), FakeVerifier::default(), decoy())
 }
 
 #[test]
@@ -149,4 +155,97 @@ fn a_decoy_that_matches_never_logs_anyone_in() {
 
     assert!(matches!(result, Err(LoginUserError::InvalidCredentials)));
     assert_eq!(use_case.verifier.calls(), 1);
+}
+
+#[test]
+fn store_failure_keeps_its_cause_and_skips_the_verifier() {
+    let use_case = LoginUser::new(
+        InMemoryUserRepository::default().failing_with("store is down"),
+        FakeVerifier::default(),
+        decoy(),
+    );
+
+    let error =
+        block_on(use_case.execute(email("user@example.com"), password("horse-battery-staple")))
+            .expect_err("the store fails");
+
+    assert!(matches!(error, LoginUserError::Unexpected(_)));
+    assert_cause(&error, "store is down");
+    assert_eq!(use_case.verifier.calls(), 0);
+}
+
+#[test]
+fn verifier_failure_keeps_its_cause_for_a_known_email() {
+    let use_case = LoginUser::new(
+        repository_with(&[("user@example.com", "horse-battery-staple")]),
+        FakeVerifier::default().failing_with("verifier is down"),
+        decoy(),
+    );
+
+    let error =
+        block_on(use_case.execute(email("user@example.com"), password("horse-battery-staple")))
+            .expect_err("the verifier fails");
+
+    assert!(matches!(error, LoginUserError::Unexpected(_)));
+    assert_cause(&error, "verifier is down");
+}
+
+#[test]
+fn verifier_failure_is_unexpected_for_an_unknown_email_too() {
+    let use_case = LoginUser::new(
+        InMemoryUserRepository::default(),
+        FakeVerifier::default().failing_with("verifier is down"),
+        decoy(),
+    );
+
+    let error = block_on(use_case.execute(
+        email("nobody@example.com"),
+        password("horse-battery-staple"),
+    ))
+    .expect_err("the verifier fails");
+
+    assert!(matches!(error, LoginUserError::Unexpected(_)));
+    assert_cause(&error, "verifier is down");
+}
+
+#[test]
+fn errors_do_not_carry_the_password() {
+    let wrong = use_case(&[("user@example.com", "correct-horse-battery")]);
+    let broken = LoginUser::new(
+        InMemoryUserRepository::default(),
+        FakeVerifier::default().failing_with("verifier is down"),
+        decoy(),
+    );
+
+    let rejected =
+        block_on(wrong.execute(email("user@example.com"), password("horse-battery-staple")))
+            .expect_err("rejects the password");
+    let failed =
+        block_on(broken.execute(email("user@example.com"), password("horse-battery-staple")))
+            .expect_err("the verifier fails");
+
+    for error in [rejected, failed] {
+        assert!(!format!("{error:?}").contains("horse-battery-staple"));
+        assert!(!format!("{error}").contains("horse-battery-staple"));
+    }
+}
+
+#[test]
+fn error_propagates_as_std_error() {
+    fn log_in_with_question_mark(
+        use_case: &LoginUser<InMemoryUserRepository, FakeVerifier>,
+    ) -> Result<(), Box<dyn Error>> {
+        block_on(use_case.execute(
+            email("nobody@example.com"),
+            password("horse-battery-staple"),
+        ))?;
+        Ok(())
+    }
+
+    let error = log_in_with_question_mark(&use_case(&[])).expect_err("propagates the rejection");
+
+    assert_eq!(
+        error.to_string(),
+        LoginUserError::InvalidCredentials.to_string()
+    );
 }

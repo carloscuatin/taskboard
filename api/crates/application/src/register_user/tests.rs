@@ -2,7 +2,8 @@ use std::error::Error;
 
 use super::*;
 use crate::test_support::{
-    EventLog, FakeHasher, InMemoryUserRepository, block_on, email, fake_hash, password,
+    EventLog, FakeHasher, InMemoryUserRepository, assert_cause, block_on, email, fake_hash,
+    password,
 };
 use crate::{PasswordHasher, UserRepository};
 
@@ -132,12 +133,12 @@ fn hashing_failure_stops_before_saving() {
         FakeHasher::default().failing_with("hasher is down"),
     );
 
-    let result =
-        block_on(use_case.execute(email("user@example.com"), password("horse-battery-staple")));
+    let error =
+        block_on(use_case.execute(email("user@example.com"), password("horse-battery-staple")))
+            .expect_err("the hasher fails");
 
-    assert!(
-        matches!(result, Err(RegisterUserError::Unexpected(cause)) if cause.to_string() == "hasher is down")
-    );
+    assert!(matches!(error, RegisterUserError::Unexpected(_)));
+    assert_cause(&error, "hasher is down");
     assert_eq!(use_case.repository.attempts(), 0);
     assert!(use_case.repository.saved().is_empty());
 }
@@ -154,8 +155,7 @@ fn store_failure_keeps_its_cause() {
             .expect_err("the store fails");
 
     assert!(matches!(error, RegisterUserError::Unexpected(_)));
-    let cause = error.source().expect("an unexpected error has a cause");
-    assert_eq!(cause.to_string(), "connection refused");
+    assert_cause(&error, "connection refused");
 }
 
 #[test]
@@ -170,8 +170,7 @@ fn hashing_failure_keeps_its_cause() {
             .expect_err("the hasher fails");
 
     assert!(matches!(error, RegisterUserError::Unexpected(_)));
-    let cause = error.source().expect("an unexpected error has a cause");
-    assert_eq!(cause.to_string(), "hasher unavailable");
+    assert_cause(&error, "hasher unavailable");
 }
 
 #[test]
